@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gemini API Chat</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f0;
+    }
+
+    #container {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    #chat-box {
+      height: 400px;
+      overflow-y: scroll;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      background-color: #f9f9f9;
+    }
+
+    #input-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #input-area textarea {
+      flex-grow: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical; /* Allow vertical resizing */
+      margin-bottom: 5px;
+    }
+
+    #input-area button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 5px;
+    }
+
+    #input-area button:hover {
+      background-color: #3e8e41;
+    }
+
+    .message {
+      margin-bottom: 5px;
+      padding: 8px;
+      border-radius: 5px;
+    }
+
+    .user-message {
+      background-color: #DCF8C6; /* Light green */
+      text-align: right;
+    }
+
+    .bot-message {
+      background-color: #ECE5DD; /* Light gray */
+      text-align: left;
+    }
+
+  </style>
+</head>
+<body>
+
+<div id="container">
+  <h1>Gemini API Chat</h1>
+
+  <div id="chat-box">
+    <!-- Chat messages will be displayed here -->
+  </div>
+
+  <div id="input-area">
+    <textarea id="message-input" placeholder="Type your message here..." rows="4"></textarea>
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</div>
+
+<script>
+  // **IMPORTANT:  REPLACE WITH YOUR ACTUAL API KEY**
+  const API_KEY = "AIzaSyDrBR0o40COF4BDxzt9VLeC1tF-rQ9pmFI";
+
+  async function sendMessage() {
+    if (!API_KEY) {
+      alert("API_KEY is not set in the code! Please add your API key to the script.");
+      return;
+    }
+
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value.trim();
+
+    if (message === "") {
+      return; // Don't send empty messages
+    }
+
+    const chatBox = document.getElementById('chat-box');
+
+    // Display the user's message
+    const userMessageDiv = document.createElement('div');
+    userMessageDiv.classList.add('message', 'user-message');
+    userMessageDiv.textContent = message;
+    chatBox.appendChild(userMessageDiv);
+
+    messageInput.value = ""; // Clear the input
+
+    // Scroll to the bottom of the chat box
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+      // Call the Gemini API
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + API_KEY, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: message }]
+          }]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      // Extract the bot's response
+      let botResponse = "Sorry, I encountered an error.";
+      if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts.length > 0) {
+        botResponse = data.candidates[0].content.parts[0].text;
+      } else if (data.error && data.error.message) {
+          botResponse = `Error from Gemini API: ${data.error.message}`;
+      } else {
+        console.error("Unexpected API Response:", data);
+        botResponse = "Unexpected response from the API.";
+      }
+
+
+      // Display the bot's response
+      const botMessageDiv = document.createElement('div');
+      botMessageDiv.classList.add('message', 'bot-message');
+      botMessageDiv.textContent = botResponse;
+      chatBox.appendChild(botMessageDiv);
+
+      // Scroll to the bottom of the chat box
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+    } catch (error) {
+      console.error('Error calling Gemini API:', error);
+      const errorMessageDiv = document.createElement('div');
+      errorMessageDiv.classList.add('message', 'bot-message');
+      errorMessageDiv.textContent = `Error: ${error.message}`;
+      chatBox.appendChild(errorMessageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }
+
+
+  // Prevent form submission on Enter key press
+  document.getElementById('message-input').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault(); // Prevent newline from being inserted
+      sendMessage();
+    }
+  });
+
+</script>
+
+</body>
+</html>
